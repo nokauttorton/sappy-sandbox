@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ni Sandbox</title>
+    <link rel="icon" type="image/png" href="static/favicon.png" sizes="96x96">
+    <script src="Vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <nav class="padding20 navbar">
+        <button class="nav-button button" @click="menuButton">{{ `${!openFirstBlock ? 'Open' : 'Close'} chats` }}</button>
+      </nav>
+      <transition name="fade">
+        <div v-if="openFirstBlock" class="padding20 content-wrapper">
+          <div class="padding20 chats-block">
+            <img v-if="!allChats.length" class="preloader" src="static/preloader.gif"></img>
+            <template v-else >
+              <div class="white-card chats-list">
+                <div v-for="(chat, index) in allChats" :key="`${index}`" class="chat-card">
+                  <button class="button chat-card-button" @click="getChat(chat)">{{ chat.name }}</button>
+                </div>
+              </div>
+              <div class="white-card chats-texts">
+                <div v-if="!messages.length" class="empty-chat"><span class="arrow">&#8592;</span> Выберите чат, что бы начать переписку</div>
+                <div v-else class="chats-texts-wrapper">
+                  <div v-for="(message, index) in messages" :key="`${index}`" class="chat-message">
+                    <div class="message">{{ message && message.text }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="white-card chat-profile">
+                <div class="chat-image-wrap">
+                  <img class="chat-image" :src="choosenChat && choosenChat.photo || 'static/no-logo.png'"></img>
+                </div>
+                <div v-if="choosenChat && choosenChat.name" class="chat-name">{{ choosenChat && choosenChat.name }}</div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </transition>
+    </div>
+  <script>
+    new Vue ({
+      el: '#app',
+      data: {
+        openFirstBlock: false,
+        allChats: [],
+        choosenChat: [],
+        messages: []
+      },
+      async created () {
+        try {
+          const chats = await axios.get('https://sc.smstraffic.ru/api/test/chats')
+          if (chats && chats.data) setTimeout(() => { this.allChats = chats.data }, 2000) //для симуляции получения большого ответа, установлен прелоадер
+        } catch (error) {
+          console.error('возникла ошибка', error)
+        }
+      },
+
+      methods: {
+        async getChat(item) {
+          try {
+            if (item) {
+              this.choosenChat = item
+              const chat = await axios.get(`https://sc.smstraffic.ru/api/test/chats/${item.id}/messages`)
+              if (chat && chat.data) this.messages = chat.data
+            }
+          } catch (error) {
+            console.error('возникла ошибка', error)
+          }
+        },
+
+        menuButton () {
+          this.openFirstBlock = !this.openFirstBlock
+          this.clearData()
+        },
+
+        clearData () {
+          this.choosenChat = []
+          this.messages = []
+        }
+      }
+    });
+  </script>
+  <style>
+    /* tech classes */
+    body {
+      margin: 0;
+      color: #333;
+      font-size: 14px;
+      font-family: Roboto, sans-serif;
+      line-height: 1.4286;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .padding20 {
+      padding: 20px;
+    }
+
+    .white-card {
+      height: 100%;
+      background-color: #fff;
+      border-radius: 20px;
+    }
+
+    .button {
+      cursor: pointer;
+    }
+
+    .button:focus {
+      outline: none;
+    }
+
+    .button:hover {
+      opacity: 0.7;
+    }
+
+    /* end tech classes */
+
+    /* fades */
+
+    .fade-enter-active {
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    .fade-leave-active {
+      transition: all 0.5s ease-in-out;
+    }
+
+    .fade-enter-to {
+      opacity: 1;
+    }
+
+    .fade-leave-to {
+      transform: translateY(100px);
+      opacity: 0;
+    }
+
+    /* end fades */
+
+    .navbar {
+      display: inline-block;
+      background-color: rgba(0, 0, 0, 0.459);
+    }
+
+    .nav-button {
+      width: 150px;
+      height: 44px;
+      border: 0;
+      border-radius: 10px;
+    }
+
+    .chats-block {
+      display: flex;
+      flex-direction: row;
+      height: 600px;
+      background-color: #e5e5e5b0;
+      border-radius: 20px;
+    }
+
+    .preloader {
+      width: 100px;
+      height: 100px;
+      margin: auto;
+    }
+
+    .chats-list {
+      flex-grow: 1;
+      width: 100%;
+      max-width: 400px;
+      margin-right: 20px;
+      overflow: hidden;
+    }
+
+    .chats-texts-wrapper {
+      margin-top: 40px;
+      overflow: hidden;
+    }
+
+    .chats-texts {
+      flex-grow: 2;
+      margin-right: 20px;
+    }
+
+    .chat-message {
+      padding: 10px 20px;
+    }
+
+    .message {
+      display: flex;
+      align-items: center;
+      justify-content: left;
+      min-height: 40px;
+      padding: 10px 20px;
+      background-color: rgb(244, 244, 244);
+      border-radius: 20px;
+    }
+
+    .chat-card {
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      text-align: center;
+    }
+
+    .chat-card:first-child {
+      padding-top: 40px;
+    }
+
+    .chat-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .chat-card-button {
+      width: 100%;
+      height: 60px;
+      /* stylelint-disable */
+      font: inherit;
+      /* stylelint-enable */
+      border: 0;
+      border-radius: 10px;
+    }
+
+    .empty-chat {
+      display: inline-block;
+      padding: 55px 20px 20px;
+      font-size: 20px;
+    }
+
+    .chat-profile {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .chat-image-wrap {
+      width: 300px;
+      height: 230px;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      border-radius: 20px;
+    }
+
+    .chat-image {
+      width: 300px;
+      height: auto;
+      border-radius: 20px;
+    }
+
+    .chat-name {
+      width: 100%;
+      max-width: 300px;
+      height: 60px;
+      font-size: 20px;
+      line-height: 60px;
+      text-align: center;
+      background-color: rgb(239, 239, 239);
+      border-radius: 10px;
+    }
+
+    @media screen and (max-width: 1023px) { /* планшеты и меньше */
+      .content-wrapper {
+        height: 100%;
+      }
+
+      .chats-block {
+        flex-direction: column-reverse;
+        align-items: center;
+        height: auto;
+      }
+
+      .chats-list,
+      .chats-texts {
+        margin: 0 0 20px;
+      }
+
+      .chat-card {
+        margin: 0;
+        padding: 20px;
+      }
+
+      .chat-card:first-child {
+        padding: 20px;
+      }
+
+      .chat-profile {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+      }
+
+      .arrow {
+        display: none;
+      }
+
+      .empty-chat {
+        padding-top: 20px;
+      }
+
+      .chats-texts {
+        width: 100%;
+        text-align: center;
+      }
+
+      .chats-texts-wrapper {
+        margin-top: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+  </body>
+</html>

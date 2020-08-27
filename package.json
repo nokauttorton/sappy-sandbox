@@ -1,0 +1,26 @@
+{
+  "name": "sappy-sandbox",
+  "version": "1.0.0",
+  "description": "personal sandbox for experimental and practice",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "lite-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nokauttorton/sappy-sandbox.git"
+  },
+  "author": "NiBog",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nokauttorton/sappy-sandbox/issues"
+  },
+  "homepage": "https://github.com/nokauttorton/sappy-sandbox#readme",
+  "devDependencies": {
+    "lite-server": "^2.5.4"
+  },
+  "dependencies": {
+    "sass": "^1.26.10"
+  }
+}
