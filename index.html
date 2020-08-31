@@ -11,12 +11,13 @@
   <body>
     <div id="app" class="app">
       <nav class="padding20 navbar">
-        <button class="nav-button button" @click="menuButton">{{ `${!openFirstBlock ? 'Open' : 'Close'} chats` }}</button>
+        <button class="nav-button button" @click="mainMenuButton">{{ `${!openFirstBlock ? 'Open' : 'Close'} chats` }}</button>
+        <button class="nav-button button" @click="openFeedback">{{ `${!openSecondBlock ? 'Open' : 'Close'} feedback form` }}</button>
       </nav>
       <transition name="fade">
         <div v-if="openFirstBlock" class="padding20 content-wrapper">
           <div class="padding20 chats-block">
-            <img v-if="!allChats.length" class="preloader" src="static/preloader.gif"></img>
+            <img v-if="!allChats.length" class="preloader" :class="{ 'preloader-on' : !allChats.length}" src="static/preloader.gif"></img>
             <template v-else >
               <div class="white-card chats-list">
                 <div v-for="(chat, index) in allChats" :key="`${index}`" class="chat-card">
@@ -40,6 +41,68 @@
             </template>
           </div>
         </div>
+        <div v-if="openSecondBlock" class="padding20 content-wrapper">
+          <div class="padding20 form-block">
+            <div class="white-card padding20 form-body">
+              <form class="form">
+                <h2 class="form-title">Заполните форму</h2>
+                <div class="input-wrapper">
+                  <div class="phone-prefix">+7</div>
+                  <input v-model="phone"
+                          v-phone
+                          class="input phone-input"
+                          :class="{ 'error-border' : check && !phoneIsValid }"
+                          name="phone"
+                          id="phone"
+                          placeholder="(___) ___-____"
+                          maxlength="14"
+                          pattern="[(][0-9]{3}[)] [0-9]{3}-[0-9]{4}"
+                          required/>
+                </div>
+                <span class="error-message transition" :class="{ 'show-message' : check && !phoneIsValid }">проверьте корректность номера</span>
+                <input v-model="email"
+                        class="input input-wrapper email-input"
+                        :class="{ 'error-border' : check && !emailIsvalid }"
+                        name="email"
+                        placeholder="Электронная почта"
+                        pattern="([A-z0-9_.-]{1,})@([A-z0-9_.-]{1,}).([A-z]{2,8})"
+                        required/>
+                <span class="error-message transition" :class="{ 'show-message' : check && !emailIsvalid }">проверьте корректность
+                  почтового адреса</span>
+                <textarea v-model="text"
+                          class="text-area form-text-area"
+                          :class="{ 'error-border' : check && !textIsValid }"
+                          name="comment"
+                          placeholder="Напишите что-нибудь"
+                          >
+                </textarea>
+                <span class="error-message transition" :class="{ 'show-message' : check && !textIsValid }">текст должен содержать от 10 до 1000 символов</span>
+                <label class="checkbox-label" :class="{ 'error-color' : check && !agreement }" >
+                  <input v-model="agreement"
+                        type="checkbox"
+                        class="checkbox checkbox-input"
+                        name="checkbox"
+                        @click="agreement = !agreement"
+                        required/>
+                        согласен на обработку персональных данных.
+                </label>
+                <span class="error-message transition" :class="{ 'show-message' : check && !agreement }">не забудьте согласиться на обработку данных :)</span>
+                <div @mouseenter="setCheckInputs" @mouseleave="setOffCheckInputs">
+                  <input type="button" 
+                         value="Отправить" 
+                         :disabled="!checkForm" 
+                         @click="getAnswer()" 
+                         class="submit-button"
+                         >
+                </div>
+              </form>
+              <div class="answer-body" :class="{ 'mobile-show-answer' : answer }">
+                <h2 class="form-title">Отправим данные</h2>
+                <pre>{{ answer }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
       </transition>
     </div>
   <script>
@@ -47,9 +110,18 @@
       el: '#app',
       data: {
         openFirstBlock: false,
+        openSecondBlock: false,
+
         allChats: [],
         choosenChat: [],
-        messages: []
+        messages: [],
+
+        check: false,
+        phone: '',
+        email: '',
+        text: '',
+        agreement: false,
+        answer: null
       },
       async created () {
         try {
@@ -57,6 +129,26 @@
           if (chats && chats.data) setTimeout(() => { this.allChats = chats.data }, 2000) //для симуляции получения большого ответа, установлен прелоадер
         } catch (error) {
           console.error('возникла ошибка', error)
+        }
+      },
+
+      computed: {
+        textIsValid () {
+          const textLength = this.text.trim().length
+          if (textLength >= 10 && textLength <= 1000) return true
+        },
+
+        phoneIsValid () {
+          let phone = this.phone.match(/(\d{0,3})(\d{0,3})(\d{0,4})/)
+          if (phone && phone.length === 4 && this.phone.length > 13) return true
+        },
+
+        emailIsvalid () {
+          let mail = this.email.match(/([A-z0-9_.-]{1,})@([A-z0-9_.-]{1,}).([A-z]{2,8})/)
+          if (mail && mail.length === 4) return true
+        },
+        checkForm() {
+          return this.phoneIsValid && this.emailIsvalid && this.textIsValid && this.agreement
         }
       },
 
@@ -73,7 +165,8 @@
           }
         },
 
-        menuButton () {
+        mainMenuButton () {
+          this.openSecondBlock = false
           this.openFirstBlock = !this.openFirstBlock
           this.clearData()
         },
@@ -81,6 +174,48 @@
         clearData () {
           this.choosenChat = []
           this.messages = []
+          this.phone = '',
+          this.email = '',
+          this.text = '',
+          this.agreement = false,
+          this.answer = null
+        },
+
+        openFeedback () {
+          this.openFirstBlock = false
+          this.openSecondBlock = !this.openSecondBlock
+          this.clearData()
+        },
+
+        getAnswer () {
+          return this.answer = {
+            Phone: this.phone.replace(/\D/g, ''),
+            Email: this.email,
+            Msg: this.text,
+            Agree: this.agreement ? 'Y' : 'N'
+          }
+        },
+
+        setCheckInputs () {
+          this.check = true
+        },
+
+        setOffCheckInputs () {
+          this.check = false
+        }
+      }
+    });
+    Vue.directive('phone', { // маска телефона в инпуте
+      bind(el) {
+        el.oninput = function (e) {
+          if (!e.isTrusted) {
+            return;
+          }
+
+          const phone = this.value.replace('+7', '').replace('8', '')
+          let x = phone.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+          this.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+          el.dispatchEvent(new Event('input'));
         }
       }
     });
@@ -92,7 +227,7 @@
       color: #333;
       font-size: 14px;
       font-family: Roboto, sans-serif;
-      line-height: 1.4286;
+      line-height: 1.42;
     }
 
     .app {
@@ -105,21 +240,86 @@
     }
 
     .white-card {
-      height: 100%;
       background-color: #fff;
       border-radius: 20px;
     }
 
     .button {
+      /* stylelint-disable */
+      font: inherit;
+      /* stylelint-enable */
       cursor: pointer;
     }
 
-    .button:focus {
+    .button:focus,
+    .checkbox:focus {
       outline: none;
     }
 
     .button:hover {
       opacity: 0.7;
+    }
+
+    .input {
+      max-width: 300px;
+      height: 44px;
+      /* stylelint-disable */
+      font: inherit;
+      /* stylelint-enable */
+      border-top: 0;
+      border-right: 0;
+      border-bottom: 2px solid #d5d5d5;
+      border-left: 0;
+      transition: 0.3s;
+    }
+
+    .input:focus {
+      border-bottom: 2px solid #2b2b2b;
+      outline: none;
+    }
+
+    .input:-webkit-autofill {
+      -webkit-box-shadow: 0 0 0 50px #fff inset; /* можно изменить на любой вариант цвета */
+      box-shadow: 0 0 0 50px #fff inset;
+      -webkit-text-fill-color: #2b2b2b;
+    }
+
+    .text-area {
+      /* stylelint-disable */
+      font: 400 18px Roboto, sans-serif;
+      /* stylelint-enable */
+      border-top: 0;
+      border-right: 0;
+      border-bottom: 2px solid #d5d5d5;
+      border-left: 0;
+      transition: 0.3s;
+    }
+
+    .text-area:focus {
+      border-bottom: 2px solid #2b2b2b;
+      outline: none;
+    }
+
+    .error-color {
+      color: rgb(218, 50, 50);
+    }
+
+    .error-border,
+    .error-border:focus {
+      border-bottom: 2px solid rgb(218, 50, 50);
+    }
+
+    .form .error-message {
+      margin-top: 5px;
+      margin-bottom: 20px;
+      color: #fff;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    .form .show-message {
+      color: rgb(218, 50, 50);
+      opacity: 0.9;
     }
 
     /* end tech classes */
@@ -146,17 +346,24 @@
 
     /* end fades */
 
+    /* navbar */
     .navbar {
-      display: inline-block;
+      display: flex;
+      overflow: hidden;
       background-color: rgba(0, 0, 0, 0.459);
     }
 
     .nav-button {
       width: 150px;
       height: 44px;
+      margin-right: 20px;
       border: 0;
       border-radius: 10px;
     }
+
+    /* end navbar */
+
+    /* chats block */
 
     .chats-block {
       display: flex;
@@ -167,9 +374,14 @@
     }
 
     .preloader {
+      display: none;
       width: 100px;
       height: 100px;
       margin: auto;
+    }
+
+    .preloader-on {
+      display: block;
     }
 
     .chats-list {
@@ -221,9 +433,6 @@
     .chat-card-button {
       width: 100%;
       height: 60px;
-      /* stylelint-disable */
-      font: inherit;
-      /* stylelint-enable */
       border: 0;
       border-radius: 10px;
     }
@@ -270,7 +479,112 @@
       border-radius: 10px;
     }
 
-    @media screen and (max-width: 1023px) { /* планшеты и меньше */
+    /* end chats block */
+
+    /* feedback block */
+    .form-body {
+      display: flex;
+      width: 100%;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      width: 50%;
+    }
+
+
+    .form-block {
+      display: flex;
+      flex-direction: row;
+      background-color: #e5e5e5b0;
+      border-radius: 20px;
+    }
+
+    .phone-prefix {
+      position: absolute;
+      z-index: 1;
+      margin-top: 11px;
+      font-size: 18px;
+    }
+
+    .input-wrapper {
+      font-size: 18px;
+      background-color: #fff;
+    }
+
+    .form-title {
+      margin-top: 0;
+    }
+
+    .phone-input {
+      position: relative;
+      display: inline-block;
+      width: 225px;
+      padding-left: 25px;
+    }
+
+    .email-input {
+      width: 250px;
+    }
+
+    .checkbox-input {
+      margin: 0 5px 0 0;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .submit-button {
+      width: 100%;
+      height: 44px;
+      color: #fff;
+      background-color: #2b2b2b;
+      /* stylelint-disable */
+      font: inherit;
+      /* stylelint-enable */
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .submit-button:disabled {
+      cursor: auto;
+      opacity: 0.7;
+    }
+
+    .submit-button:focus {
+      outline: none;
+    }
+
+    .submit-button:enabled:hover {
+      opacity: 0.9;
+    }
+
+
+    /* end feedback block */
+
+
+    @media screen and (min-width: 1023px) and (max-width: 1450px) { /* малый десктоп */
+      .chat-profile,
+      .chats-list {
+        width: 25%;
+      }
+
+      .chat-image-wrap {
+        width: 80%;
+      }
+
+      .chat-image {
+        width: 100%;
+      }
+    }
+
+    @media screen and (max-width: 1023px) { /* планшеты */
       .content-wrapper {
         height: 100%;
       }
@@ -316,6 +630,61 @@
       .chats-texts-wrapper {
         margin-top: 0;
         padding: 20px;
+      }
+
+      .checkbox-label {
+        font-size: inherit;
+      }
+    }
+
+    @media screen and (max-width: 768px) { /* смартфоны и фаблеты */
+      .chat-image,
+      .chat-image-wrap,
+      .form,
+      .email-input,
+      .text-area {
+        width: 100%;
+      }
+
+      .chat-profile {
+        padding: 10px;
+      }
+
+      .chat-image-wrap {
+        margin: 0;
+      }
+
+      .chat-name {
+        margin-top: 10px;
+      }
+
+      .form-body {
+        flex-direction: column;
+      }
+
+      .phone-input {
+        width: calc(100% - 25px); /* учитываем отступ для префикса */
+      }
+
+      .checkbox-input {
+        margin: 0 10px 0 0;
+      }
+
+      .form .error-message {
+        font-size: 12px;
+      }
+
+      .answer-body {
+        display: none;
+        margin-top: 20px;
+      }
+
+      .mobile-show-answer {
+        display: block;
+      }
+
+      pre {
+        font-size: 9px;
       }
     }
   </style>
